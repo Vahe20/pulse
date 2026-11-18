@@ -1,0 +1,386 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  STUDENT
+  LECTURER
+  EDU_LEAD
+  ADMIN_LEAD
+  DIRECTOR
+  SYSTEM_ADMIN
+}
+
+enum QuestionKind {
+  RATING
+  TEXT
+  SINGLE
+  MULTIPLE
+}
+
+enum SurveyStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum AnalysisStatus {
+  QUEUED
+  PROCESSING
+  REVIEW
+  PUBLISHED
+  FAILED
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+model Role {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  name      RoleName @unique
+  users     User[]
+}
+
+model User {
+  id                  String             @id @default(uuid()) @db.Uuid
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
+  name                String
+  email               String             @unique
+  passwordHash        String
+  roleId              String             @db.Uuid
+  role                Role               @relation(fields: [roleId], references: [id])
+  memberships         GroupMembership[]
+  lecturer            Lecturer?
+  sessions            RefreshSession[]
+  invitations         SurveyInvitation[]
+  identifiedResponses SurveyResponse[]
+  createdSurveys      Survey[]
+  assigned            Issue[]            @relation("owner")
+  createdIssues       Issue[]            @relation("creator")
+  history             IssueHistory[]
+  audit               AuditLog[]
+}
+
+model Course {
+  id        String         @id @default(uuid()) @db.Uuid
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @default(now()) @updatedAt
+  name      String         @unique
+  groups    StudentGroup[]
+}
+
+model StudentGroup {
+  id        String            @id @default(uuid()) @db.Uuid
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
+  name      String            @unique
+  courseId  String            @db.Uuid
+  course    Course            @relation(fields: [courseId], references: [id])
+  members   GroupMembership[]
+  targets   SurveyTarget[]
+}
+
+model GroupMembership {
+  id        String       @id @default(uuid()) @db.Uuid
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @default(now()) @updatedAt
+  studentId String       @db.Uuid
+  groupId   String       @db.Uuid
+  student   User         @relation(fields: [studentId], references: [id])
+  group     StudentGroup @relation(fields: [groupId], references: [id])
+
+  @@unique([studentId, groupId])
+  @@index([groupId])
+}
+
+model Lecturer {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  surveys   Survey[]
+}
+
+model Survey {
+  id            String             @id @default(uuid()) @db.Uuid
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @default(now()) @updatedAt
+  title         String
+  description   String
+  anonymous     Boolean            @default(true)
+  status        SurveyStatus       @default(DRAFT)
+  startAt       DateTime
+  endAt         DateTime
+  minimum       Int                @default(5)
+  reminderHours Int                @default(48)
+  maxReminders  Int                @default(2)
+  creatorId     String             @db.Uuid
+  creator       User               @relation(fields: [creatorId], references: [id])
+  lecturerId    String             @db.Uuid
+  lecturer      Lecturer           @relation(fields: [lecturerId], references: [id])
+  targets       SurveyTarget[]
+  questions     SurveyQuestion[]
+  invitations   SurveyInvitation[]
+  responses     SurveyResponse[]
+  analyses      AIAnalysis[]
+  issues        Issue[]
+
+  @@index([status, startAt, endAt])
+}
+
+model SurveyTarget {
+  id        String       @id @default(uuid()) @db.Uuid
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @default(now()) @updatedAt
+  surveyId  String       @db.Uuid
+  groupId   String       @db.Uuid
+  survey    Survey       @relation(fields: [surveyId], references: [id])
+  group     StudentGroup @relation(fields: [groupId], references: [id])
+
+  @@unique([surveyId, groupId])
+}
+
+model SurveyQuestion {
+  id        String         @id @default(uuid()) @db.Uuid
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @default(now()) @updatedAt
+  surveyId  String         @db.Uuid
+  survey    Survey         @relation(fields: [surveyId], references: [id])
+  kind      QuestionKind
+  prompt    String
+  criterion String?
+  category  String
+  position  Int
+  required  Boolean
+  options   SurveyOption[]
+  answers   Answer[]
+
+  @@unique([surveyId, position])
+}
+
+model SurveyOption {
+  id         String         @id @default(uuid()) @db.Uuid
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @default(now()) @updatedAt
+  questionId String         @db.Uuid
+  question   SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  label      String
+  position   Int
+
+  @@unique([questionId, position])
+}
+
+model SurveyInvitation {
+  id            String         @id @default(uuid()) @db.Uuid
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+  surveyId      String         @db.Uuid
+  studentId     String         @db.Uuid
+  survey        Survey         @relation(fields: [surveyId], references: [id])
+  student       User           @relation(fields: [studentId], references: [id])
+  completed     Boolean        @default(false)
+  reminders     Int            @default(0)
+  nextReminder  DateTime?
+  notifications Notification[]
+
+  @@unique([surveyId, studentId])
+  @@index([completed, nextReminder])
+}
+
+model SurveyResponse {
+  id        String   @id @default(uuid()) @db.Uuid
+  surveyId  String   @db.Uuid
+  survey    Survey   @relation(fields: [surveyId], references: [id])
+  studentId String?  @db.Uuid
+  student   User?    @relation(fields: [studentId], references: [id])
+  answers   Answer[]
+
+  @@index([surveyId])
+}
+
+model Answer {
+  id         String         @id @default(uuid()) @db.Uuid
+  responseId String         @db.Uuid
+  questionId String         @db.Uuid
+  response   SurveyResponse @relation(fields: [responseId], references: [id])
+  question   SurveyQuestion @relation(fields: [questionId], references: [id])
+  value      Json
+  comments   ThemeComment[]
+
+  @@unique([responseId, questionId])
+}
+
+model AIAnalysis {
+  id        String         @id @default(uuid()) @db.Uuid
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @default(now()) @updatedAt
+  surveyId  String         @db.Uuid
+  survey    Survey         @relation(fields: [surveyId], references: [id])
+  status    AnalysisStatus @default(QUEUED)
+  source    String
+  summary   String?
+  themes    Theme[]
+
+  @@index([surveyId, status])
+}
+
+model Theme {
+  id              String         @id @default(uuid()) @db.Uuid
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
+  analysisId      String         @db.Uuid
+  analysis        AIAnalysis     @relation(fields: [analysisId], references: [id])
+  title           String
+  description     String
+  sentiment       Sentiment
+  confidence      Float?
+  suggestedAction String
+  mentions        Int
+  comments        ThemeComment[]
+  issues          Issue[]
+}
+
+model ThemeComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  themeId   String   @db.Uuid
+  answerId  String   @db.Uuid
+  theme     Theme    @relation(fields: [themeId], references: [id])
+  answer    Answer   @relation(fields: [answerId], references: [id])
+
+  @@unique([themeId, answerId])
+}
+
+model Issue {
+  id          String         @id @default(uuid()) @db.Uuid
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
+  title       String
+  description String
+  category    String
+  priority    Priority
+  status      IssueStatus    @default(OPEN)
+  assigneeId  String         @db.Uuid
+  assignee    User           @relation("owner", fields: [assigneeId], references: [id])
+  creatorId   String         @db.Uuid
+  creator     User           @relation("creator", fields: [creatorId], references: [id])
+  surveyId    String         @db.Uuid
+  survey      Survey         @relation(fields: [surveyId], references: [id])
+  themeId     String?        @db.Uuid
+  theme       Theme?         @relation(fields: [themeId], references: [id])
+  dueAt       DateTime
+  resolvedAt  DateTime?
+  history     IssueHistory[]
+  outgoing    IssueLink[]    @relation("from")
+  incoming    IssueLink[]    @relation("to")
+
+  @@index([assigneeId, status, dueAt])
+}
+
+model IssueLink {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  fromId    String   @db.Uuid
+  toId      String   @db.Uuid
+  from      Issue    @relation("from", fields: [fromId], references: [id])
+  to        Issue    @relation("to", fields: [toId], references: [id])
+
+  @@unique([fromId, toId])
+}
+
+model IssueHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  issueId   String   @db.Uuid
+  issue     Issue    @relation(fields: [issueId], references: [id])
+  actorId   String   @db.Uuid
+  actor     User     @relation(fields: [actorId], references: [id])
+  event     String
+  detail    Json
+
+  @@index([issueId, createdAt])
+}
+
+model Notification {
+  id           String           @id @default(uuid()) @db.Uuid
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @default(now()) @updatedAt
+  invitationId String           @db.Uuid
+  invitation   SurveyInvitation @relation(fields: [invitationId], references: [id])
+  sequence     Int
+  status       DeliveryStatus   @default(PENDING)
+
+  @@unique([invitationId, sequence])
+}
+
+model RefreshSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  digest    String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+
+  @@index([userId, expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  actorId    String   @db.Uuid
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  resourceId String   @db.Uuid
+
+  @@index([resourceId, createdAt])
+}
+
+model Setting {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  key       String   @unique
+  value     Float
+}

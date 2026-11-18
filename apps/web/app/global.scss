@@ -1,0 +1,146 @@
+* {
+  box-sizing: border-box;
+}
+:root {
+  --bg: #f6f7f9;
+  --panel: #fff;
+  --ink: #172428;
+  --muted: #596b6c;
+  --line: #dce5e2;
+  --accent: #136653;
+  --soft: #e6f4ed;
+  --side: #132d29;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #101b1a;
+  --panel: #192725;
+  --ink: #edf5f2;
+  --muted: #b1c7c1;
+  --line: #344b44;
+  --accent: #88dbc3;
+  --soft: #263f37;
+  --side: #0a1916;
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  font:
+    14px Inter,
+    "Segoe UI",
+    sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+a {
+  color: var(--accent);
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+button,
+a,
+input,
+select,
+textarea {
+  outline-offset: 3px;
+}
+button {
+  cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 13px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+input,
+textarea,
+select {
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  width: 100%;
+  min-width: 0;
+}
+textarea {
+  min-height: 80px;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+}
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+  margin: 0 0 12px;
+}
+h2 {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  margin: 0 0 15px;
+}
+h3 {
+  font-size: 15px;
+}
+p,
+small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+form,
+fieldset {
+  display: grid;
+  gap: 13px;
+}
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 14px;
+  min-width: 0;
+}
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  max-width: min(450px, 95vw);
+}
+dialog::backdrop {
+  background: #081b1777;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+td,
+th {
+  text-align: left;
+  padding: 11px 9px;
+  border-bottom: 1px solid var(--line);
+}
+th {
+  color: var(--muted);
+}
+[role="alert"] {
+  color: #b34e36;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

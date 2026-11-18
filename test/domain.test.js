@@ -1,0 +1,7 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import domain from '../packages/shared/dist/index.js';
+import ai from '../apps/api/dist/ai.js';
+const {validateAnswers,difference,mentions}=domain;
+test('rating, choices and required answers enforce the survey contract',()=>{const q={id:'rating',kind:'RATING',required:true,options:[]};assert.equal(validateAnswers([q],{rating:5}),null);for(const bad of [0,6,'5',null])assert.ok(validateAnswers([q],{rating:bad}));assert.ok(validateAnswers([q],{}));assert.ok(validateAnswers([q],{rating:4,other:2}));const choice={...q,kind:'MULTIPLE',options:[{id:'a'},{id:'b'}]};assert.equal(validateAnswers([choice],{rating:['a','b']}),null);assert.ok(validateAnswers([choice],{rating:['a','a']}));});
+test('differences and distinct supporting submissions',()=>{assert.deepEqual(difference(4,3),{absolute:-1,percent:-25});assert.equal(difference(0,2).percent,null);assert.equal(mentions(['a','a','b']),2);});
+test('structured output must reference real comments and cover submitted feedback',()=>{const theme={title:'Practice',description:'Exercises',suggestedAction:'Add exercises',confidence:.7,sentiment:'NEUTRAL',refs:['1']};const result={summary:'Summary',themes:[theme]};assert.doesNotThrow(()=>ai.validateReferences(result,new Set(['1'])));assert.throws(()=>ai.validateReferences(result,new Set(['2'])));assert.throws(()=>ai.validateReferences(result,new Set(['1','2'])));assert.throws(()=>ai.validateReferences({...result,themes:[{...theme,refs:['1','1']}]},new Set(['1'])));});

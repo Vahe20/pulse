@@ -1,0 +1,2 @@
+# Pulse
+Read docs/PROGRESS.md before resuming. Work in apps/api, apps/web and packages for the PostgreSQL application. Preserve existing SQLite fixtures and data. Use strict TypeScript. Authorize and scope database queries before aggregation. Never log survey answers or tokens. Keep invitation completion and response insertion atomic. Add a regression test for changes affecting identity separation, sample thresholds, or role access. Record actual command results separately from implementation status.
