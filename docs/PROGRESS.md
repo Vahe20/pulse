@@ -64,3 +64,11 @@ Opening the mobile sidebar locks the page scroll position. Long menus scroll ind
 ### Verification
 
 Web typecheck and workspace lint passed. The production build and all six isolated Playwright acceptance scenarios passed. The regression test uses touch input in a 390 x 540 Edge viewport to check swipes on the backdrop, in the sidebar and on the page after closing.
+
+## Local production startup
+
+The workspace start command runs the builds for the web and API applications before launching them. The mobile navigation regression suite also exercises the overview at 503 x 873 with wheel and keyboard input.
+
+### Verification
+
+The previous local Next.js server on port 3100 served the older green stylesheet without the scroll lock. A wheel gesture with the drawer open moved the overview from 0 to 750 pixels. The overview regression failed against that server. After restarting through the new workspace start command, both mobile navigation tests passed against the same local address (2 passed in 5.7 seconds). Workspace lint passed.

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 test.use({
   viewport: { width: 390, height: 540 },
@@ -6,10 +7,8 @@ test.use({
   hasTouch: true,
 });
 
-test("swipes scroll the open navigation independently of the page", async ({
-  page,
-}) => {
-  await page.goto("/surveys/new");
+async function signInAt(page: Page, path: string) {
+  await page.goto(path);
   await page
     .getByLabel("Email", { exact: true })
     .fill(process.env.ADMIN_EMAIL!);
@@ -17,6 +16,12 @@ test("swipes scroll the open navigation independently of the page", async ({
     .getByLabel("Password", { exact: true })
     .fill(process.env.ADMIN_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+}
+
+test("swipes scroll the open navigation independently of the page", async ({
+  page,
+}) => {
+  await signInAt(page, "/surveys/new");
   await expect(
     page.getByRole("heading", { name: "Create survey" }),
   ).toBeVisible();
@@ -56,4 +61,32 @@ test("swipes scroll the open navigation independently of the page", async ({
   expect(await pageOffset()).toBe(initialOffset);
   await swipeUp(350);
   await expect.poll(pageOffset).toBeGreaterThan(initialOffset);
+});
+
+test("mouse wheel over the overview chart cannot scroll behind the mobile menu", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 503, height: 873 });
+  await signInAt(page, "/login");
+  await expect(
+    page.getByText("Satisfaction over time", { exact: true }),
+  ).toBeVisible();
+  const toggle = page.getByRole("button", { name: "Toggle navigation" });
+  await toggle.click();
+  const offset = () => page.evaluate(() => window.scrollY);
+  const before = await offset();
+  await page.mouse.move(450, 500);
+  await page.mouse.wheel(0, 750);
+  await page.keyboard.press("End");
+  await page.evaluate(
+    () =>
+      new Promise<void>((done) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => done())),
+      ),
+  );
+  expect(await offset()).toBe(before);
+  await page.keyboard.press("Escape");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.mouse.wheel(0, 750);
+  await expect.poll(offset).toBeGreaterThan(before);
 });

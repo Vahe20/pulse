@@ -10,7 +10,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "node scripts/env.mjs pnpm turbo dev --env-mode=loose",
-    "start": "node scripts/env.mjs pnpm --parallel --filter @pulse/api --filter @pulse/web start",
+    "start": "node scripts/env.mjs pnpm turbo start --env-mode=loose",
     "legacy:start": "node src/server.js",
     "test": "node --test test/*.test.js",
     "typecheck": "turbo typecheck",
