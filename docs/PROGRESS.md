@@ -48,3 +48,11 @@ The current checkout has no configured OpenAI key. The provider contract was exe
 - A local authenticated check made 20 report requests, two concurrently, with 99 ms p95 latency. A new Edge browser context displayed dashboard metrics in 1,729 ms. This small local run does not establish production capacity.
 - The first disposable stack failed its PostgreSQL readiness check. A fresh run migrated and seeded successfully and verified named email recipients, reminders and privacy restrictions. Its browser invitation deep link exposed a session-cache subscription issue at sign-in. Login now retains the active session query while clearing role-scoped records.
 - Final `pnpm test:acceptance` with Edge exited 0. All five scenarios passed in 24.2 seconds on fresh containers. This covered the emailed survey route after login, the invite roster and its access limits, four delivered invitations and three reminders, theme review, issue resolution and closure, stale-update rejection, updated report counts, CSV and PDF. The runner removed its temporary resources. The main localhost deployment was updated separately.
+
+## Workspace design
+
+The sign-in page and workspace now share a new visual style. The overview groups seven measures into four cards and adds a satisfaction area chart, category score bars and collapsible filters. Mobile navigation supports dismissal with the backdrop or Escape.
+
+### Verification
+
+Web TypeScript, workspace lint and the production web image build passed. All five isolated Playwright acceptance scenarios passed in 28 seconds. Browser checks covered sign-in, the dashboard, dark mode, the survey builder and mobile navigation at a 390px viewport with no horizontal overflow.

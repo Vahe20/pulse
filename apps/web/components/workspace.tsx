@@ -4,11 +4,13 @@ import { loginSchema } from "@pulse/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  ArrowRight,
   BarChart3,
   Bell,
   BookOpen,
   CheckSquare,
   ClipboardList,
+  FileText,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -17,10 +19,11 @@ import {
   Settings2,
   Sun,
   Users,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { login, logout, session, User } from "../lib/client";
@@ -36,7 +39,7 @@ const links = [
   ["analysis", "AI analysis", Activity],
   ["trends", "Trends", BarChart3],
   ["issues", "Issues", CheckSquare],
-  ["reports", "Reports", BookOpen],
+  ["reports", "Reports", FileText],
   ["groups", "Groups", Users],
   ["courses", "Courses", BookOpen],
   ["lecturers", "Lecturers", GraduationCap],
@@ -57,7 +60,12 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
         <span className={s.logo}>
           <Activity /> Pulse
         </span>
-        <div>
+        <div className={s.waveArt} aria-hidden="true">
+          {Array.from({ length: 26 }, (_, i) => (
+            <i key={i} style={{ "--i": i } as CSSProperties} />
+          ))}
+        </div>
+        <div className={s.loginCaption}>
           <h1>Student feedback</h1>
           <p>Surveys, insights, and improvements for your academy.</p>
         </div>
@@ -83,7 +91,7 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
           />
         </label>
         <button className={s.primary} disabled={a.busy}>
-          Sign in
+          Sign in <ArrowRight size={17} aria-hidden="true" />
         </button>
         <p role="alert">{a.error}</p>
       </form>
@@ -117,6 +125,17 @@ export function Workspace({ path }: { path: string[] }) {
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);
+  useEffect(() => {
+    if (!mobile) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobile(false);
+        document.getElementById("pulse-menu-toggle")?.focus();
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [mobile]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 3500);
@@ -157,7 +176,14 @@ export function Workspace({ path }: { path: string[] }) {
   };
   return (
     <div className={s.layout}>
-      <aside className={mobile ? s.mobileOpen : ""}>
+      {mobile && (
+        <button
+          aria-label="Close navigation"
+          className={s.scrim}
+          onClick={() => setMobile(false)}
+        />
+      )}
+      <aside id="pulse-sidebar" className={mobile ? s.mobileOpen : ""}>
         <span className={s.logo}>
           <Activity /> Pulse
         </span>
@@ -179,6 +205,14 @@ export function Workspace({ path }: { path: string[] }) {
           ))}
         </nav>
         <footer>
+          <span aria-hidden="true" className={s.avatar}>
+            {user.name
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((n) => n[0])
+              .join("")}
+          </span>
           <strong>{user.name}</strong>
           <small>{user.role.replaceAll("_", " ")}</small>
           <button
@@ -198,10 +232,13 @@ export function Workspace({ path }: { path: string[] }) {
         <header>
           <button
             className={s.menu}
+            id="pulse-menu-toggle"
+            aria-controls="pulse-sidebar"
+            aria-expanded={mobile}
             aria-label="Toggle navigation"
             onClick={() => setMobile(!mobile)}
           >
-            <Menu />
+            {mobile ? <X /> : <Menu />}
           </button>
           <span>
             Workspace / <b>{active?.[1] || "Unavailable"}</b>

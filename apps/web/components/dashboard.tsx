@@ -1,12 +1,20 @@
 "use client";
 import { issueStates } from "@pulse/shared";
+import {
+  ArrowUpRight,
+  ClipboardList,
+  Inbox,
+  MessageCircle,
+  SlidersHorizontal,
+  Star,
+} from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -41,6 +49,39 @@ export function Dashboard({ view, user }: { view: string; user: User }) {
   const q = useApi<Report>("reports?" + qs);
   const a = useAction();
   const d = q.data;
+  const metrics = d
+    ? [
+        {
+          label: "Total surveys",
+          value: d.surveys,
+          detail: d.active + " active",
+          icon: ClipboardList,
+          tone: "violet",
+        },
+        {
+          label: "Response rate",
+          value:
+            d.responseRate === null ? "—" : d.responseRate.toFixed(1) + "%",
+          detail: d.responses + " of " + d.invited + " invitations",
+          icon: MessageCircle,
+          tone: "teal",
+        },
+        {
+          label: "Satisfaction",
+          value: d.score === null ? "—" : d.score.toFixed(2),
+          detail: "Average rating out of 5",
+          icon: Star,
+          tone: "gold",
+        },
+        {
+          label: "Open issues",
+          value: d.openIssues,
+          detail: d.resolved + " resolved · " + d.overdue + " overdue",
+          icon: Inbox,
+          tone: "rose",
+        },
+      ]
+    : [];
   const field = (k: string, v: string) => set((f) => ({ ...f, [k]: v }));
   return (
     <>
@@ -78,12 +119,15 @@ export function Dashboard({ view, user }: { view: string; user: User }) {
           </div>
         ) : (
           <Link className={s.actionLink} href="/reports">
-            View report
+            View report <ArrowUpRight size={16} aria-hidden="true" />
           </Link>
         )}
       </div>
-      <details className={s.card}>
-        <summary>Report filters</summary>
+      <details className={s.reportFilters}>
+        <summary>
+          <SlidersHorizontal size={16} aria-hidden="true" />
+          Report filters
+        </summary>
         <div className={s.filters}>
           {staff && (
             <>
@@ -147,45 +191,90 @@ export function Dashboard({ view, user }: { view: string; user: User }) {
       ) : (
         <>
           <div className={s.metrics}>
-            {[
-              ["Total surveys", d.surveys],
-              ["Active surveys", d.active],
-              [
-                "Response rate",
-                d.responseRate === null ? "—" : d.responseRate.toFixed(1) + "%",
-              ],
-              [
-                "Satisfaction",
-                d.score === null ? "—" : d.score.toFixed(2) + " / 5",
-              ],
-              ["Open issues", d.openIssues],
-              ["Resolved issues", d.resolved],
-              ["Overdue issues", d.overdue],
-            ].map(([label, v]) => (
-              <div className={s.metric} key={label}>
-                <small>{label}</small>
-                <strong>{v}</strong>
+            {metrics.map(({ label, value, detail, icon: Icon, tone }) => (
+              <div className={s.metric} key={label} data-tone={tone}>
+                <div className={s.metricLabel}>
+                  <span className={s.metricIcon}>
+                    <Icon size={17} aria-hidden="true" />
+                  </span>
+                  {label}
+                </div>
+                <strong>{value}</strong>
+                <small>{detail}</small>
               </div>
             ))}
           </div>
-          <div className={s.grid}>
+          <div className={s.chartGrid}>
             <Card title="Satisfaction over time">
               {d.timeline.length ? (
                 <div className={s.chart}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={d.timeline}>
-                      <CartesianGrid strokeDasharray="3 4" vertical={false} />
-                      <XAxis dataKey="date" tickFormatter={when} />
-                      <YAxis domain={[1, 5]} />
-                      <Tooltip labelFormatter={(v) => when(String(v))} />
-                      <Line
+                    <AreaChart
+                      data={d.timeline}
+                      margin={{ top: 10, right: 12, bottom: 2, left: 0 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="scoreFill"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="var(--accent)"
+                            stopOpacity={0.25}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--accent)"
+                            stopOpacity={0.02}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        stroke="var(--line)"
+                        strokeDasharray="3 5"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={when}
+                        minTickGap={35}
+                        tickMargin={9}
+                        tick={{ fill: "var(--muted)", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        domain={[1, 5]}
+                        width={27}
+                        ticks={[1, 2, 3, 4, 5]}
+                        tick={{ fill: "var(--muted)", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: "var(--panel)",
+                          borderColor: "var(--line)",
+                          borderRadius: 10,
+                        }}
+                        labelFormatter={(v) => when(String(v))}
+                      />
+                      <Area
                         type="linear"
                         dataKey="score"
                         name="Average score"
-                        stroke="#218a6a"
+                        stroke="var(--accent)"
+                        fill="url(#scoreFill)"
+                        baseValue={1}
+                        dot={{ r: 3, fill: "var(--panel)", strokeWidth: 2 }}
+                        isAnimationActive={false}
                         strokeWidth={3}
                       />
-                    </LineChart>
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
@@ -197,9 +286,10 @@ export function Dashboard({ view, user }: { view: string; user: User }) {
             <Card title="Scores by category">
               {d.categories.length ? (
                 d.categories.map((c) => (
-                  <div className={s.row} key={c.category}>
-                    <strong>{c.category}</strong> · {c.score.toFixed(2)} / 5{" "}
-                    <progress max={5} value={c.score} />
+                  <div className={s.category} key={c.category}>
+                    <strong>{c.category}</strong>
+                    <span>{c.score.toFixed(2)} / 5</span>
+                    <progress aria-label={c.category} max={5} value={c.score} />
                   </div>
                 ))
               ) : (
