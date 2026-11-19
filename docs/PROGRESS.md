@@ -72,3 +72,11 @@ The workspace start command runs the builds for the web and API applications bef
 ### Verification
 
 The previous local Next.js server on port 3100 served the older green stylesheet without the scroll lock. A wheel gesture with the drawer open moved the overview from 0 to 750 pixels. The overview regression failed against that server. After restarting through the new workspace start command, both mobile navigation tests passed against the same local address (2 passed in 5.7 seconds). Workspace lint passed.
+
+## Browser tab icon
+
+The Next.js app provides a scalable pulse mark matching the sidebar logo.
+
+### Verification
+
+The local production build started successfully. Edge loaded the login page, found its generated icon link, and fetched a 200 image/svg+xml response containing the expected logo stroke.
