@@ -56,3 +56,11 @@ The sign-in page and workspace now share a new visual style. The overview groups
 ### Verification
 
 Web TypeScript, workspace lint and the production web image build passed. All five isolated Playwright acceptance scenarios passed in 28 seconds. Browser checks covered sign-in, the dashboard, dark mode, the survey builder and mobile navigation at a 390px viewport with no horizontal overflow.
+
+## Mobile navigation scrolling
+
+Opening the mobile sidebar locks the page scroll position. Long menus scroll independently, and closing the menu releases the page.
+
+### Verification
+
+Web typecheck and workspace lint passed. The production build and all six isolated Playwright acceptance scenarios passed. The regression test uses touch input in a 390 x 540 Edge viewport to check swipes on the backdrop, in the sidebar and on the page after closing.
