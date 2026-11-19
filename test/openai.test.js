@@ -20,11 +20,22 @@ test("OpenAI adapter sends a strict schema, validates output and handles provide
     ],
   };
   let refuse = false;
+  let batchMode = false;
+  const batchSizes = [];
   let received;
   const server = createServer(async (req, res) => {
     let json = "";
     for await (const chunk of req) json += chunk;
     received = JSON.parse(json);
+    const records = JSON.parse(received.messages.at(-1).content);
+    let response = fixture;
+    if (batchMode) {
+      batchSizes.push(records.length);
+      response = {
+        ...fixture,
+        themes: [{ ...fixture.themes[0], refs: records.map((r) => r.ref) }],
+      };
+    }
     res.setHeader("Content-Type", "application/json");
     res.end(
       JSON.stringify({
@@ -33,7 +44,7 @@ test("OpenAI adapter sends a strict schema, validates output and handles provide
             finish_reason: "stop",
             message: refuse
               ? { role: "assistant", content: null, refusal: "Unavailable" }
-              : { role: "assistant", content: JSON.stringify(fixture) },
+              : { role: "assistant", content: JSON.stringify(response) },
           },
         ],
       }),
@@ -62,6 +73,17 @@ test("OpenAI adapter sends a strict schema, validates output and handles provide
   assert.equal(received.response_format.json_schema.strict, true);
   assert.equal(received.store, false);
   assert.deepEqual(JSON.parse(received.messages.at(-1).content), input);
+  batchMode = true;
+  const largeSurvey = Array.from({ length: 130 }, (_, i) => ({
+    ref: "comment-" + i,
+    text: "More practice",
+  }));
+  const merged = await provider.analyze(largeSurvey);
+  assert.deepEqual(batchSizes, [64, 64, 2, 3]);
+  assert.deepEqual(
+    merged.themes[0].refs,
+    largeSurvey.map((item) => item.ref),
+  );
   refuse = true;
   await assert.rejects(provider.analyze(input), /Incomplete analysis/);
 });

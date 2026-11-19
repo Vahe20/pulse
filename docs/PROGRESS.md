@@ -31,4 +31,20 @@ The browser journey created a course and a group, published a survey, recorded s
 The job and API checks covered scheduled delivery to Mailpit, reminder exclusion for completed students, deadline and duplicate rejection, identity separation in PostgreSQL, closed-survey publication, optional rating suppression below the minimum, historical decline and subsequent-survey follow-up. Access checks covered refresh rotation, logout, role-change revocation, restricted lecturer access and cross-domain issue owner permissions. Runs created uniquely named acceptance fixtures in the local demo database.
 
 ## Operational boundaries
-No production OpenAI key was supplied. The provider contract was exercised against a local HTTP server; the full browser workflow used the labeled demo provider. Live model quality, external SMTP deliverability, production load targets and hosted CI remain unverified. The current real provider sends one request per survey analysis, so its capacity is bounded by the configured model's context window. Next acceptance work for a hosted pilot is a live-provider smoke test with approved synthetic input, provider-quality evaluation, production SMTP verification and representative load testing. Deployment instructions and required settings are in DEVELOPMENT.md. No external deployment was performed.
+
+The current checkout has no configured OpenAI key. The provider contract was exercised against a local HTTP server and the browser workflow uses the labeled demo provider. For a pilot, run the synthetic live-provider check documented in DEVELOPMENT.md, evaluate model quality, verify actual SMTP delivery and measure latency under the academy's expected load. External deployment and hosted CI for these workspace changes are unverified.
+
+## Subsequent implementation
+
+- Email invitation links retain the requested survey through sign-in.
+- Authorized managers can inspect participation and latest email delivery for identified surveys. Anonymous surveys keep aggregate participation.
+- Large surveys use bounded OpenAI requests and merge validated evidence references. The contract test covers 130 input comments, three initial requests and one merge request.
+- The acceptance runner provisions an isolated Compose project, with separate credentials, volumes, mail and ports, then removes its test resources. The CI workflow invokes the same command.
+
+## Subsequent verification
+
+- Workspace build, lint, typecheck and all eight Node tests passed. The OpenAI HTTP contract test validated a 130-comment batch merge with complete evidence coverage. A live OpenAI call remains pending credentials and explicit provider enablement.
+- The application, API, Redis, PostgreSQL and Mailpit ran together locally. The web health proxy and the OpenAPI document returned HTTP 200.
+- A local authenticated check made 20 report requests, two concurrently, with 99 ms p95 latency. A new Edge browser context displayed dashboard metrics in 1,729 ms. This small local run does not establish production capacity.
+- The first disposable stack failed its PostgreSQL readiness check. A fresh run migrated and seeded successfully and verified named email recipients, reminders and privacy restrictions. Its browser invitation deep link exposed a session-cache subscription issue at sign-in. Login now retains the active session query while clearing role-scoped records.
+- Final `pnpm test:acceptance` with Edge exited 0. All five scenarios passed in 24.2 seconds on fresh containers. This covered the emailed survey route after login, the invite roster and its access limits, four delivered invitations and three reminders, theme review, issue resolution and closure, stale-update rejection, updated report counts, CSV and PDF. The runner removed its temporary resources. The main localhost deployment was updated separately.

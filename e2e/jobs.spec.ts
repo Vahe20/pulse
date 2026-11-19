@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import client from "../apps/api/node_modules/@prisma/client/default.js";
+import { apiUrl, mailUrl } from "./endpoints";
 test("persistent scheduling, SMTP reminders, anonymous aggregation and closing analysis", async ({
   request,
 }) => {
@@ -10,7 +11,7 @@ test("persistent scheduling, SMTP reminders, anonymous aggregation and closing a
     throw Error("Dedicated demo database required");
   const db = new client.PrismaClient();
   try {
-    const base = "http://localhost:4100/api/v1/";
+    const base = apiUrl + "/";
     const sign = async (email: string, password: string) => {
       const r = await request.post(base + "auth/login", {
         headers: { "x-pulse-client": "web" },
@@ -29,10 +30,11 @@ test("persistent scheduling, SMTP reminders, anonymous aggregation and closing a
     const lecturer = await db.lecturer.findFirstOrThrow({
       where: { user: { email: "lecturer@pulse.test" } },
     });
+    const title = "Anonymous scheduler check " + randomUUID();
     const course = await request.post(base + "surveys", {
       headers: admin,
       data: {
-        title: "Anonymous scheduler check " + randomUUID(),
+        title,
         description: "Local acceptance fixture",
         groupIds: [group.id],
         lecturerId: lecturer.id,
@@ -74,6 +76,13 @@ test("persistent scheduling, SMTP reminders, anonymous aggregation and closing a
     });
     expect(course.status()).toBe(201);
     const { id } = await course.json();
+    expect(
+      (
+        await request.get(base + "surveys/" + id + "/invitations", {
+          headers: admin,
+        })
+      ).status(),
+    ).toBe(404);
     await request.post(base + "surveys/" + id + "/publish", {
       headers: admin,
       data: {},
@@ -208,10 +217,32 @@ test("persistent scheduling, SMTP reminders, anonymous aggregation and closing a
     expect(analysis.source).toBe("DEMO");
     expect(analysis.themes[0].mentions).toBe(3);
     expect(analysis.themes[0].comments).toHaveLength(6);
-    const stats = await request.get(
-      "http://localhost:58025/api/v1/messages?limit=1",
+    const inbox = await request.get(mailUrl + "/api/v1/search", {
+      params: { query: 'subject:"' + title + '"', limit: 20 },
+    });
+    expect(inbox.ok()).toBeTruthy();
+    type Mail = { ID: string; Subject: string; To: { Address: string }[] };
+    const { messages }: { messages: Mail[] } = await inbox.json();
+    const recipients = (subject: string) =>
+      messages
+        .filter((message) => message.Subject === subject + title)
+        .flatMap((message) => message.To.map((to) => to.Address))
+        .sort();
+    const pending = [
+      "student2@pulse.test",
+      "student3@pulse.test",
+      "student4@pulse.test",
+    ];
+    expect(recipients("Survey invitation: ")).toEqual(
+      [...pending, "student@pulse.test"].sort(),
     );
-    expect(stats.ok()).toBeTruthy();
+    expect(recipients("Survey reminder: ")).toEqual(pending);
+    const email = await request.get(
+      mailUrl + "/api/v1/message/" + messages[0].ID,
+    );
+    expect((await email.json()).Text).toContain(
+      process.env.WEB_ORIGIN + "/surveys/" + id,
+    );
   } finally {
     await db.$disconnect();
   }

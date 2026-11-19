@@ -30,6 +30,8 @@ The administrator uses ADMIN_EMAIL and ADMIN_PASSWORD. In local demo mode use DE
 
 ## Tests
 
+To exercise the complete Docker deployment on a workstation, install dependencies, build once for the local Prisma test client, install a Playwright browser, then run `pnpm test:acceptance`. On Windows with Edge installed use `$env:PULSE_BROWSER_CHANNEL='msedge'`. This command needs Docker Compose 2.24.4 or later for port overrides. It builds both images, provisions a separate database, queue and mail inbox with generated credentials and runs the browser/API suite on available ports. The runner removes its own containers and volumes on exit. Your local instance can keep running throughout the test.
+
 ```sh
 pnpm lint
 pnpm typecheck
@@ -39,6 +41,8 @@ pnpm e2e
 ```
 
 Run E2E against a dedicated seeded development database and Mailpit. The suite creates uniquely named fixtures. For installed Microsoft Edge, set PULSE_BROWSER_CHANNEL=msedge. Playwright can start the built servers when their ports are free. CI provisions the services and runs these checks on Linux.
+
+For a live provider smoke test, set OPENAI_API_KEY, OPENAI_MODEL and ALLOW_EXTERNAL_AI=true and run `node --env-file=.env scripts/check-ai.mjs` after building. This sends three synthetic comments through the production adapter and validates its structured response. Review the returned theme titles and references to judge semantic grouping. A live request uses the configured provider account and incurs its usual charges.
 
 ## Container deployment
 

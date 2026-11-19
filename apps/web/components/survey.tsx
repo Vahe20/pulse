@@ -561,6 +561,75 @@ function Review({ survey, user, done }: { survey: Survey } & Props) {
     </Card>
   );
 }
+function Invitations({ id }: { id: string }) {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const { data, error } = useApi<
+    {
+      id: string;
+      student: { name: string };
+      completed: boolean;
+      notifications: { sequence: number; status: string }[];
+    }[]
+  >(
+    "surveys/" +
+      id +
+      "/invitations?page=" +
+      page +
+      "&search=" +
+      encodeURIComponent(search),
+  );
+  return (
+    <Card title="Invitations">
+      <label>
+        Find student
+        <input
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+      </label>
+      {!data ? (
+        <Load error={error} />
+      ) : data.length ? (
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Response</th>
+              <th>Latest email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row) => {
+              const latest = row.notifications[0];
+              return (
+                <tr key={row.id}>
+                  <td>{row.student.name}</td>
+                  <td>{row.completed ? "Submitted" : "Awaiting response"}</td>
+                  <td>
+                    {latest
+                      ? (latest.sequence
+                          ? "Reminder " + latest.sequence
+                          : "Invitation") +
+                        " · " +
+                        nice(latest.status)
+                      : "Pending"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      ) : (
+        <Empty>No invitations match.</Empty>
+      )}
+      <Pages page={page} size={data?.length ?? 0} set={setPage} />
+    </Card>
+  );
+}
 function Detail({
   id,
   view,
@@ -649,6 +718,10 @@ function Detail({
               <Link href={"/reports?survey=" + id}>Survey report</Link>
             </Card>
           )}
+          {view === "surveys" &&
+            manage(user) &&
+            !survey.anonymous &&
+            !!survey._count?.invitations && <Invitations id={id} />}
           <Review survey={survey} user={user} done={done} />
         </>
       )}

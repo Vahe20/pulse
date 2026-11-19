@@ -162,6 +162,7 @@ export function documentContracts(doc: OpenAPIObject) {
           "courses",
           "lecturers",
           "surveys",
+          "surveys/{id}/invitations",
           "issues",
           "notifications",
         ].includes(route)

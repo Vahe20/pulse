@@ -1,5 +1,7 @@
 # REST API v1
 
+For identified surveys, `GET /api/v1/surveys/:id/invitations` returns a paginated list of invited student names, completion flags and the most recent notification sequence and delivery status. Edu Lead and System Admin may use the list. Anonymous surveys expose aggregate participation on the survey details page.
+
 The interactive OpenAPI explorer is served at /api/v1/docs on the API origin. The JSON document is at /api/v1/docs-json. API clients send JSON. Authenticated requests use Authorization: Bearer followed by the access token. Browser refresh and logout use the same-origin refresh cookie and X-Pulse-Client: web. Authentication returns the user role, name and ID.
 
 | Route under /api/v1 | Operations |

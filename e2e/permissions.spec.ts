@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
+import { apiUrl } from "./endpoints";
 
 test("role changes revoke sessions and restrict the new lecturer to their surveys", async ({
   request,
 }) => {
   if (process.env.DEMO_MODE !== "true")
     throw Error("Dedicated demo database required");
-  const api = "http://localhost:4100/api/v1/";
+  const api = apiUrl + "/";
   const login = async (email: string, password: string) => {
     const result = await request.post(api + "auth/login", {
       headers: { "x-pulse-client": "web" },

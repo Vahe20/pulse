@@ -25,6 +25,10 @@ pnpm start
 
 Open [Pulse](http://localhost:3100). Use the generated ADMIN_EMAIL and ADMIN_PASSWORD in the local .env. The seeded educational lead is edu@pulse.test and the student is student@pulse.test. Demo users use the generated DEMO_PASSWORD. Local email appears in [Mailpit](http://localhost:58025).
 
+## Acceptance tests
+
+To verify a fresh end-to-end installation without writing to your academy database, run `pnpm build`, install Chromium with `pnpm exec playwright install chromium`, then run `pnpm test:acceptance` from the workspace. This starts a temporary Docker Compose stack and exercises scheduling, email delivery, student submission, theme review, issue tracking, reports and access controls.
+
 ## Repository
 
 | Location | Contents |

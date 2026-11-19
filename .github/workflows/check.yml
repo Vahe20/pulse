@@ -11,11 +11,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/setup.mjs
-      - run: docker compose up -d --wait postgres redis mail
-      - run: pnpm db:migrate && pnpm build && pnpm db:seed
+      - run: pnpm build
       - run: pnpm lint && pnpm typecheck && pnpm test
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm e2e
-      - if: always()
-        run: docker compose down
+      - run: pnpm test:acceptance

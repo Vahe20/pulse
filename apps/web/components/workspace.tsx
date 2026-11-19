@@ -105,7 +105,9 @@ export function Workspace({ path }: { path: string[] }) {
   useEffect(() => {
     setDark(localStorage.getItem("pulse-theme") === "dark");
     const out = () => {
-      cache.clear();
+      cache.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "session",
+      });
       cache.setQueryData(["session"], null);
       router.replace("/login");
     };
@@ -125,9 +127,12 @@ export function Workspace({ path }: { path: string[] }) {
     return (
       <Login
         onLogin={(u) => {
-          cache.clear();
+          cache.removeQueries({
+            predicate: (query) => query.queryKey[0] !== "session",
+          });
           cache.setQueryData(["session"], u);
-          router.replace(u.role === "STUDENT" ? "/surveys" : "/overview");
+          if (!path.length || path[0] === "login")
+            router.replace(u.role === "STUDENT" ? "/surveys" : "/overview");
         }}
       />
     );

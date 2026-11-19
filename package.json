@@ -17,6 +17,7 @@
     "lint": "eslint apps packages",
     "format": "prettier --write apps packages",
     "e2e": "playwright test",
+    "test:acceptance": "node scripts/acceptance.mjs",
     "db:migrate": "node scripts/env.mjs pnpm --filter @pulse/api db:migrate",
     "db:seed": "node scripts/env.mjs pnpm --filter @pulse/api db:seed",
     "db:backup": "node scripts/backup-postgres.mjs",

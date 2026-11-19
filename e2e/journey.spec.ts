@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
+import { apiUrl } from "./endpoints";
 test("academy survey to confirmed improvement task", async ({
   page,
   request,
@@ -13,7 +14,7 @@ test("academy survey to confirmed improvement task", async ({
   if (process.env.DEMO_MODE !== "true")
     throw Error("Run the acceptance suite against a dedicated demo deployment");
   const password = process.env.DEMO_PASSWORD!;
-  const base = "http://localhost:4100/api/v1";
+  const base = apiUrl;
   const sign = async (email: string, pwd = password) => {
     const res = await request.post(base + "/auth/login", {
       headers: { "x-pulse-client": "web" },
@@ -26,8 +27,12 @@ test("academy survey to confirmed improvement task", async ({
     process.env.ADMIN_EMAIL!,
     process.env.ADMIN_PASSWORD!,
   );
-  const uiLogin = async (email: string, pwd = password) => {
-    await page.goto("/login");
+  const uiLogin = async (
+    email: string,
+    pwd = password,
+    destination = "/login",
+  ) => {
+    await page.goto(destination);
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(pwd);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -115,8 +120,8 @@ test("academy survey to confirmed improvement task", async ({
     )
     .toBe("ACTIVE");
   await signout();
-  await uiLogin(students[0]);
-  await page.getByRole("link", { name: title, exact: true }).click();
+  await uiLogin(students[0], password, "/surveys/" + id);
+  await expect(page).toHaveURL(new RegExp("/surveys/" + id + "$"));
   await page.getByRole("radio", { name: "4", exact: true }).check();
   await page
     .getByRole("textbox", { name: "What would improve the course?" })
@@ -127,6 +132,11 @@ test("academy survey to confirmed improvement task", async ({
   ).toBeVisible();
   for (const email of students.slice(1, 3)) {
     const headers = await sign(email);
+    expect(
+      (
+        await request.get(base + "/surveys/" + id + "/invitations", { headers })
+      ).status(),
+    ).toBe(403);
     expect((await request.get(base + "/reports", { headers })).status()).toBe(
       403,
     );
@@ -158,6 +168,16 @@ test("academy survey to confirmed improvement task", async ({
   }
   await signout();
   await uiLogin("edu@pulse.test");
+  await page.goto("/surveys/" + id);
+  await expect(
+    page.getByRole("heading", { name: "Invitations", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Submitted", exact: true }),
+  ).toHaveCount(3);
+  await expect(
+    page.getByRole("cell", { name: "Awaiting response", exact: true }),
+  ).toHaveCount(1);
   await page.goto("/analysis/" + id);
   const queued = page.waitForResponse(
     (r) =>
@@ -231,9 +251,26 @@ test("academy survey to confirmed improvement task", async ({
   expect((await downloadPromise).suggestedFilename()).toBe("pulse-report.csv");
   const pdf = await page.pdf({ format: "A4" });
   expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+  const taskUrl = base + new URL(issueUrl).pathname;
+  const task = await (await request.get(taskUrl, { headers: admin })).json();
+  const change = (status: string, updatedAt: string) =>
+    request.put(taskUrl, { headers: admin, data: { status, updatedAt } });
+  expect((await change("CLOSED", task.updatedAt)).status()).toBe(409);
+  expect((await change("RESOLVED", task.updatedAt)).status()).toBe(200);
+  const resolved = await (
+    await request.get(taskUrl, { headers: admin })
+  ).json();
+  expect(resolved.resolvedAt).toBeTruthy();
+  expect((await change("CLOSED", task.updatedAt)).status()).toBe(409);
+  expect((await change("CLOSED", resolved.updatedAt)).status()).toBe(200);
+  const finalReport = await (
+    await request.get(base + "/reports?surveyId=" + id, { headers: admin })
+  ).json();
+  expect(finalReport.openIssues).toBe(0);
+  expect(finalReport.resolved).toBe(1);
 });
 test("refresh rotation and logout invalidate sessions", async ({ request }) => {
-  const url = "http://localhost:4100/api/v1";
+  const url = apiUrl;
   const headers = { "x-pulse-client": "web" };
   const r = await request.post(url + "/auth/login", {
     headers,

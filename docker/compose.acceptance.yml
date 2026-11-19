@@ -1,0 +1,17 @@
+# Each invocation uses fresh volumes and lets Docker choose unused host ports.
+services:
+  postgres:
+    ports: !override ["127.0.0.1::5432"]
+  redis:
+    ports: !override []
+  mail:
+    ports: !override ["127.0.0.1::8025"]
+  api:
+    env_file: !override ["${PULSE_ACCEPTANCE_ENV:?Start with pnpm test:acceptance}"]
+    environment:
+      WEB_ORIGIN: ${PULSE_ACCEPTANCE_ORIGIN}
+      SMTP_HOST: mail
+      SMTP_PORT: 1025
+    ports: !override ["127.0.0.1::4100"]
+  web:
+    ports: !override ["127.0.0.1:${PULSE_ACCEPTANCE_PORT}:3100"]

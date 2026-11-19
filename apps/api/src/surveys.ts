@@ -108,6 +108,38 @@ export class Surveys {
     if (!s) throw new NotFoundException();
     return s;
   }
+  @Get(":id/invitations") async invitations(
+    @Current() a: Actor,
+    @Param("id") id: string,
+    @Query() query: unknown,
+  ) {
+    allow(a, "EDU_LEAD", "SYSTEM_ADMIN");
+    const p = paging(query);
+    await this.db.survey.findFirstOrThrow({
+      where: { id: uuid(id), anonymous: false, ...surveyScope(a) },
+      select: { id: true },
+    });
+    return this.db.surveyInvitation.findMany({
+      where: {
+        surveyId: id,
+        survey: { anonymous: false },
+        student: { name: { contains: p.search, mode: "insensitive" } },
+      },
+      select: {
+        id: true,
+        completed: true,
+        student: { select: { name: true } },
+        notifications: {
+          select: { sequence: true, status: true },
+          orderBy: { sequence: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: [{ student: { name: p.sort } }, { id: "asc" }],
+      skip: p.skip,
+      take: p.take,
+    });
+  }
   @Post() async create(@Current() a: Actor, @Body() raw: unknown) {
     allow(a, "SYSTEM_ADMIN", "EDU_LEAD");
     const b = parse(surveySchema, raw);
